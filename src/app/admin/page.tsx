@@ -1,90 +1,79 @@
 import Link from 'next/link'
 import Image from 'next/image'
 import { getServerSession } from 'next-auth'
+import { redirect } from 'next/navigation'
 
+import { UploadForm } from '@/components/upload-form'
+import { SignOutButton } from '@/components/sign-out-button'
 import { authOptions } from '@/lib/auth'
 import { getSignedCosUrl } from '@/lib/cos'
 import { prisma } from '@/lib/prisma'
-import { SignOutButton } from '@/components/sign-out-button'
 import { parseTags } from '@/lib/tags'
 
-export default async function Home() {
-  const mediaFrameHeights = ['h-52', 'h-64', 'h-72', 'h-56', 'h-80']
+export default async function AdminPage() {
+  const mediaFrameHeights = ['h-48', 'h-60', 'h-68', 'h-52', 'h-72']
 
   const session = await getServerSession(authOptions)
-  const mediaList = await prisma.media.findMany({
+
+  if (!session?.user?.id) {
+    redirect('/login?callbackUrl=/admin')
+  }
+
+  const myMedia = await prisma.media.findMany({
+    where: { uploaderId: session.user.id },
     orderBy: { createdAt: 'desc' },
-    include: { uploader: { select: { name: true, email: true } } },
-    take: 24,
+    take: 30,
   })
-  const displayMediaList = mediaList.map((item) => ({
+  const displayMediaList = myMedia.map((item) => ({
     ...item,
     accessUrl: getSignedCosUrl(item.publicId, item.url),
     tags: parseTags(item.tags),
   }))
 
   return (
-    <div className="mx-auto w-full max-w-6xl px-4 py-8 sm:px-6 lg:px-8">
-      <header className="glass-panel relative rounded-3xl p-6 sm:p-8">
-        {!session ? (
-          <Link
-            href="/login"
-            className="absolute right-5 top-5 text-xs font-medium tracking-wide text-[#2b8f83]/75 transition hover:text-[#2b8f83] sm:right-7 sm:top-6"
-          >
-            管理入口
-          </Link>
-        ) : null}
-
-        <div className="flex flex-col gap-6 sm:flex-row sm:items-end sm:justify-between">
+    <main className="mx-auto w-full max-w-6xl px-4 py-8 sm:px-6 lg:px-8">
+      <section className="glass-panel rounded-3xl p-6 sm:p-8">
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
           <div>
             <p className="text-sm uppercase tracking-[0.22em] text-[#2b8f83]">
-              Travel Gallery
+              管理台
             </p>
-            <div className="mt-3">
+            <div className="mt-2">
               <Link
                 href="/timeline"
                 className="rounded-full border border-[#2b8f83] px-3 py-1 text-xs font-semibold text-[#2b8f83] transition hover:bg-[#2b8f83] hover:text-white"
               >
-                时间线
+                查看时间线
               </Link>
             </div>
-            <h1 className="mt-2 text-4xl font-semibold text-[#1d3a43] sm:text-5xl">
-              把旅行中的每一段风景都留下来
+            <h1 className="mt-2 text-3xl font-semibold text-[#1d3a43]">
+              欢迎回来，{session.user.name || '旅行者'}
             </h1>
-            <p className="mt-3 max-w-2xl text-sm text-[#4d7078] sm:text-base">
-              上传照片或视频，记录旅途故事。登录后可进入管理页发布内容，首页自动展示最近更新。
-            </p>
           </div>
-          {session ? (
-            <div className="flex flex-wrap gap-3">
-              <>
-                <Link
-                  href="/admin"
-                  className="rounded-full bg-[#2b8f83] px-5 py-2.5 text-sm font-semibold text-white transition hover:bg-[#23766d]"
-                >
-                  进入管理页
-                </Link>
-                <SignOutButton className="rounded-full border border-[#2b8f83] px-5 py-2.5 text-sm font-semibold text-[#2b8f83] transition hover:bg-[#2b8f83] hover:text-white">
-                  退出登录
-                </SignOutButton>
-              </>
-            </div>
-          ) : null}
+          <div className="flex gap-3">
+            <Link
+              href="/"
+              className="rounded-full border border-[#2b8f83] px-4 py-2 text-sm font-semibold text-[#2b8f83] hover:bg-[#2b8f83] hover:text-white"
+            >
+              返回首页
+            </Link>
+            <SignOutButton className="rounded-full bg-[#2b8f83] px-4 py-2 text-sm font-semibold text-white hover:bg-[#23766d]">
+              退出
+            </SignOutButton>
+          </div>
         </div>
-      </header>
 
-      <main className="mt-8 pb-10">
-        {mediaList.length === 0 ? (
-          <section className="glass-panel rounded-2xl p-8 text-center">
-            <h2 className="text-2xl font-semibold text-[#1d3a43]">
-              还没有旅行内容
-            </h2>
-            <p className="mt-2 text-[#4d7078]">
-              先登录后进入管理页，上传你的第一张照片或第一段视频。
-            </p>
-          </section>
+        <UploadForm />
+      </section>
+
+      <section className="glass-panel mt-7 rounded-3xl p-6 sm:p-8">
+        <h2 className="text-2xl font-semibold text-[#1d3a43]">我上传的内容</h2>
+        {myMedia.length === 0 ? (
+          <p className="mt-2 text-sm text-[#4d7078]">
+            你还没有上传内容，先发布一个吧。
+          </p>
         ) : (
-          <section className="columns-1 gap-5 sm:columns-2 lg:columns-3">
+          <div className="mt-4 columns-1 gap-5 sm:columns-2 lg:columns-3">
             {displayMediaList.map((item, index) => {
               const mediaFrameClass =
                 mediaFrameHeights[index % mediaFrameHeights.length]
@@ -115,7 +104,7 @@ export default async function Home() {
                       />
                     )}
                     <div className="p-4">
-                      <h3 className="line-clamp-2-custom text-xl font-semibold text-[#1d3a43]">
+                      <h3 className="line-clamp-2-custom text-lg font-semibold text-[#1d3a43]">
                         {item.title}
                       </h3>
                       {item.location ? (
@@ -123,9 +112,6 @@ export default async function Home() {
                           {item.location}
                         </p>
                       ) : null}
-                      <p className="line-clamp-2-custom mt-2 text-xs text-[#5f7f86]">
-                        {new Date(item.createdAt).toLocaleDateString('zh-CN')}
-                      </p>
                       {item.tags.length > 0 ? (
                         <div className="mt-2 flex flex-wrap gap-1.5">
                           {item.tags.map((tag) => (
@@ -143,9 +129,9 @@ export default async function Home() {
                 </Link>
               )
             })}
-          </section>
+          </div>
         )}
-      </main>
-    </div>
+      </section>
+    </main>
   )
 }

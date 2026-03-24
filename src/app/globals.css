@@ -1,26 +1,119 @@
 @import "tailwindcss";
 
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
+  --background: #f3eee2;
+  --foreground: #1d3a43;
+  --brand-sand: #d9f4ea;
+  --brand-sea: #8ed8cd;
+  --brand-forest: #2b8f83;
 }
 
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
-}
-
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
+  --font-sans: var(--font-body);
+  --font-serif: var(--font-display);
 }
 
 body {
   background: var(--background);
   color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  font-family: var(--font-body), sans-serif;
+}
+
+h1,
+h2,
+h3 {
+  font-family: var(--font-display), serif;
+}
+
+.glass-panel {
+  background: rgba(255, 255, 255, 0.82);
+  backdrop-filter: blur(10px);
+  border: 1px solid rgba(43, 143, 131, 0.16);
+}
+
+.line-clamp-2-custom {
+  display: -webkit-box;
+  overflow: hidden;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+}
+
+.timeline-daypicker {
+  --rdp-accent-color: #2b8f83;
+  --rdp-accent-background-color: #e9f6f3;
+  --rdp-day-width: 2.25rem;
+  --rdp-day-height: 2.25rem;
+  --rdp-day_button-border-radius: 9999px;
+  --rdp-nav_button-width: 2rem;
+  --rdp-nav_button-height: 2rem;
+  --rdp-nav-height: 2.25rem;
+  --rdp-animation_duration: 0.15s;
+  color: #355861;
+}
+
+.timeline-daypicker .rdp-months {
+  width: 100%;
+}
+
+.timeline-daypicker .rdp-month {
+  width: 100%;
+}
+
+.timeline-daypicker .rdp-month_grid {
+  width: 100%;
+  table-layout: fixed;
+}
+
+.timeline-daypicker .rdp-weekday,
+.timeline-daypicker .rdp-day {
+  width: 2.25rem;
+  height: 2.25rem;
+}
+
+.timeline-daypicker .rdp-day_button {
+  width: 2.25rem;
+  height: 2.25rem;
+  border-radius: 9999px;
+  color: #355861;
+}
+
+.timeline-daypicker .rdp-day_button:hover {
+  background: #e9f6f3;
+}
+
+.timeline-daypicker .rdp-selected .rdp-day_button,
+.timeline-daypicker .rdp-range_start .rdp-day_button,
+.timeline-daypicker .rdp-range_end .rdp-day_button {
+  background: #2b8f83;
+  color: #fff;
+  font-weight: 600;
+}
+
+.timeline-daypicker .rdp-range_middle {
+  background: #dff2ee;
+}
+
+.timeline-daypicker .rdp-range_middle .rdp-day_button {
+  background: transparent;
+  color: #2b8f83;
+}
+
+.timeline-daypicker .rdp-outside .rdp-day_button {
+  color: #9cb1b6;
+}
+
+.timeline-daypicker .rdp-dropdowns {
+  display: inline-flex;
+  gap: 0.5rem;
+}
+
+.timeline-daypicker .rdp-dropdown {
+  border: 1px solid #b6d9d4;
+  border-radius: 0.6rem;
+  background: #fff;
+  color: #355861;
+  padding: 0.2rem 0.45rem;
+  font-size: 0.85rem;
 }

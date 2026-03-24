@@ -1,0 +1,42 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id           String   @id @default(cuid())
+  name         String?
+  email        String   @unique
+  passwordHash String
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+  media        Media[]
+}
+
+model Media {
+  id           String    @id @default(cuid())
+  type         MediaType
+  title        String
+  location     String?
+  description  String?
+  tags         String    @default("[]")
+  url          String
+  thumbnailUrl String?
+  publicId     String
+  uploaderId   String
+  createdAt    DateTime  @default(now())
+
+  uploader User @relation(fields: [uploaderId], references: [id], onDelete: Cascade)
+
+  @@index([createdAt])
+  @@index([uploaderId])
+}
+
+enum MediaType {
+  IMAGE
+  VIDEO
+}
