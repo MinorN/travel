@@ -47,6 +47,12 @@ jobs:
             exit 1
           fi
 
+          if [[ "${TENCENT_DEPLOY_PATH}" == git@* || "${TENCENT_DEPLOY_PATH}" == http://* || "${TENCENT_DEPLOY_PATH}" == https://* ]]; then
+            echo "TENCENT_DEPLOY_PATH must be a server directory path, not a repository URL"
+            echo "Example: /home/ubuntu/travel"
+            exit 1
+          fi
+
           if [[ -z "${TENCENT_SSH_KEY}" && -z "${TENCENT_SSH_PASSWORD}" ]]; then
             echo "Missing authentication secret: set TENCENT_SSH_KEY or TENCENT_SSH_PASSWORD"
             exit 1
@@ -95,9 +101,19 @@ jobs:
             cd "$DEPLOY_PATH"
 
             echo "== Sync code =="
-            git fetch origin "$BRANCH"
-            git checkout "$BRANCH"
-            git pull --ff-only origin "$BRANCH"
+            TARGET_BRANCH="$BRANCH"
+            if ! git ls-remote --exit-code --heads origin "$TARGET_BRANCH" >/dev/null 2>&1; then
+              TARGET_BRANCH="$(git symbolic-ref --short refs/remotes/origin/HEAD 2>/dev/null | sed 's@^origin/@@')"
+            fi
+
+            if [[ -z "$TARGET_BRANCH" ]]; then
+              echo "Cannot determine target branch. Set workflow input branch explicitly."
+              exit 1
+            fi
+
+            git fetch origin "$TARGET_BRANCH"
+            git checkout -B "$TARGET_BRANCH" "origin/$TARGET_BRANCH"
+            git pull --ff-only origin "$TARGET_BRANCH"
 
             echo "== Deploy containers =="
             bash docker/deploy.sh
