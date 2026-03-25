@@ -6,6 +6,17 @@ if [[ $# -ne 1 ]]; then
   exit 1
 fi
 
+# Ensure Nginx is installed
+if ! command -v nginx >/dev/null 2>&1; then
+  echo "Nginx not found. Installing..."
+  sudo apt-get update
+  sudo apt-get install -y nginx certbot python3-certbot-nginx
+fi
+
+# Ensure configuration directories exist
+sudo mkdir -p /etc/nginx/sites-available
+sudo mkdir -p /etc/nginx/sites-enabled
+
 DOMAIN="$1"
 NGINX_SITE="/etc/nginx/sites-available/travel"
 
