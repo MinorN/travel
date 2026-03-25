@@ -198,7 +198,7 @@ export default async function TimelinePage({
                         <video
                           className="h-56 w-full object-cover"
                           preload="metadata"
-                          src={item.accessUrl}
+                          src={`${item.accessUrl}#t=0.001`}
                         />
                       )}
 

@@ -111,7 +111,7 @@ export default async function Home() {
                       <video
                         className={`w-full ${mediaFrameClass} object-cover`}
                         preload="metadata"
-                        src={item.accessUrl}
+                        src={`${item.accessUrl}#t=0.001`}
                       />
                     )}
                     <div className="p-4">
