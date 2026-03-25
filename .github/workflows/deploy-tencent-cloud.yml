@@ -10,6 +10,11 @@ on:
         description: Branch to deploy
         required: true
         default: main
+      reset_db:
+        description: 'Dangerous: Reset database (clears all data!)'
+        required: false
+        type: boolean
+        default: false
 
 concurrency:
   group: production-deploy
@@ -74,6 +79,7 @@ jobs:
             DEPLOY_PATH="${{ secrets.TENCENT_DEPLOY_PATH }}"
             REPO_URL="${{ secrets.TENCENT_REPO_URL }}"
             BRANCH="${{ github.event.inputs.branch || 'main' }}"
+            RESET_DB="${{ github.event.inputs.reset_db }}"
 
             if [[ -z "$DEPLOY_PATH" ]]; then
               echo "TENCENT_DEPLOY_PATH is empty"
@@ -114,6 +120,15 @@ jobs:
             git fetch origin "$TARGET_BRANCH"
             git checkout -B "$TARGET_BRANCH" "origin/$TARGET_BRANCH"
             git pull --ff-only origin "$TARGET_BRANCH"
+
+            if [[ "$RESET_DB" == "true" ]]; then
+              echo "!! WARNING: Resetting database volume as requested !!"
+              if command -v sudo >/dev/null 2>&1; then
+                sudo docker compose -f docker-compose.prod.yml down -v
+              else
+                docker compose -f docker-compose.prod.yml down -v
+              fi
+            fi
 
             echo "== Deploy containers =="
             if command -v sudo >/dev/null 2>&1; then
