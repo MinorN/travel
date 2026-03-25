@@ -1,5 +1,7 @@
 import type { NextConfig } from 'next'
 
+const cosDomain = process.env.COS_DOMAIN?.replace(/^https?:\/\//, '').trim()
+
 const nextConfig: NextConfig = {
   images: {
     remotePatterns: [
@@ -11,6 +13,14 @@ const nextConfig: NextConfig = {
         protocol: 'https',
         hostname: 'images.unsplash.com',
       },
+      ...(cosDomain
+        ? [
+            {
+              protocol: 'https' as const,
+              hostname: cosDomain,
+            },
+          ]
+        : []),
     ],
   },
 }
