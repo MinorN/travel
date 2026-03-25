@@ -111,15 +111,23 @@
 
 1. TENCENT_HOST：服务器公网 IP 或域名。
 2. TENCENT_USER：SSH 用户名（如 ubuntu）。
-3. TENCENT_SSH_KEY：私钥内容（建议专用部署密钥）。
-4. TENCENT_PORT：SSH 端口（默认 22，可留空）。
-5. TENCENT_DEPLOY_PATH：服务器上的项目路径（例如 /home/ubuntu/travel）。
+3. TENCENT_SSH_KEY：私钥内容（推荐）。
+4. TENCENT_SSH_PASSWORD：SSH 登录密码（如果不用私钥就填这个）。
+5. TENCENT_PORT：SSH 端口（默认 22，可留空）。
+6. TENCENT_DEPLOY_PATH：服务器上的项目路径（例如 /home/ubuntu/travel）。
+
+认证方式说明：
+
+1. 支持私钥和账号密码两种方式。
+2. 至少提供一种：TENCENT_SSH_KEY 或 TENCENT_SSH_PASSWORD。
+3. 若两者都提供，优先走私钥认证。
 
 服务器前置要求：
 
 1. 目标路径已存在且是 Git 仓库，当前分支包含 docker/deploy.sh。
 2. 服务器该路径下已准备 .env.production（不要放到仓库）。
 3. 服务器已安装 Docker 与 Docker Compose 插件。
+4. 如果使用账号密码登录，服务器 SSH 配置需允许 PasswordAuthentication。
 
 发布流程会执行：
 
