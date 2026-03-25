@@ -116,7 +116,15 @@ jobs:
             git pull --ff-only origin "$TARGET_BRANCH"
 
             echo "== Deploy containers =="
-            bash docker/deploy.sh
+            if command -v sudo >/dev/null 2>&1; then
+              sudo bash docker/deploy.sh
+            else
+              bash docker/deploy.sh
+            fi
 
             echo "== Health check =="
-            bash docker/check.sh
+            if command -v sudo >/dev/null 2>&1; then
+              sudo bash docker/check.sh
+            else
+              bash docker/check.sh
+            fi
