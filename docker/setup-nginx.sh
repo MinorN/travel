@@ -31,13 +31,8 @@ fi
 if sudo nginx -t; then
   sudo systemctl reload nginx
   echo "Nginx site enabled (HTTP only)."
+  echo "You can now access your site at http://${DOMAIN}"
 else
   echo "Nginx configuration test failed. Please check errors."
   exit 1
 fi
-
-echo "Running Certbot to enable HTTPS..."
-# Use --non-interactive if you want to automate fully, but manual is safer for first run
-sudo certbot --nginx -d "${DOMAIN}" --register-unsafely-without-email --agree-tos --redirect
-
-echo "Done! Your site should be live at https://${DOMAIN}"
