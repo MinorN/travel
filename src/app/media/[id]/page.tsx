@@ -49,7 +49,7 @@ export default async function MediaDetailPage({
 
       <article className="glass-panel overflow-hidden rounded-3xl">
         {media.type === 'IMAGE' ? (
-          <div className="relative aspect-[4/3] w-full">
+          <div className="relative aspect-4/3 w-full">
             <Image
               src={accessUrl}
               alt={media.title}
@@ -61,7 +61,7 @@ export default async function MediaDetailPage({
           </div>
         ) : (
           <video
-            className="aspect-[4/3] w-full bg-black object-contain"
+            className="aspect-4/3 w-full bg-black object-contain"
             controls
             preload="metadata"
             src={accessUrl}

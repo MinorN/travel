@@ -11,8 +11,11 @@ type TimelinePageProps = {
     start?: string
     end?: string
     tags?: string
+    page?: string
   }>
 }
+
+const PAGE_SIZE = 60
 
 function parseDateParam(value?: string) {
   if (!value) {
@@ -74,10 +77,44 @@ function toMonthLabel(key: string) {
   return `${year}年${Number(month)}月`
 }
 
+function parsePageParam(value?: string) {
+  const parsed = Number(value)
+  if (!Number.isFinite(parsed)) {
+    return 1
+  }
+
+  const integer = Math.floor(parsed)
+  return integer > 0 ? integer : 1
+}
+
+function buildTimelinePageHref(
+  query: { start?: string; end?: string; tags?: string },
+  page: number,
+) {
+  const params = new URLSearchParams()
+
+  if (query.start) {
+    params.set('start', query.start)
+  }
+  if (query.end) {
+    params.set('end', query.end)
+  }
+  if (query.tags) {
+    params.set('tags', query.tags)
+  }
+  if (page > 1) {
+    params.set('page', String(page))
+  }
+
+  const qs = params.toString()
+  return qs ? `/timeline?${qs}` : '/timeline'
+}
+
 export default async function TimelinePage({
   searchParams,
 }: TimelinePageProps) {
   const query = await searchParams
+  const currentPage = parsePageParam(query.page)
   const selectedStartDate = parseDateParam(query.start)
   const selectedEndDate = parseDateParam(query.end)
   const selectedTags = (query.tags || '')
@@ -85,8 +122,18 @@ export default async function TimelinePage({
     .map((tag) => tag.trim())
     .filter(Boolean)
 
+  const dateRange = buildDateRange(selectedStartDate, selectedEndDate)
   const where = {
-    createdAt: buildDateRange(selectedStartDate, selectedEndDate),
+    ...(dateRange ? { createdAt: dateRange } : {}),
+    ...(selectedTags.length > 0
+      ? {
+          OR: selectedTags.map((tag) => ({
+            tags: {
+              contains: `"${tag}"`,
+            },
+          })),
+        }
+      : {}),
   }
 
   const allMediaMeta = await prisma.media.findMany({
@@ -105,23 +152,31 @@ export default async function TimelinePage({
   const mediaList = await prisma.media.findMany({
     where,
     orderBy: { createdAt: 'desc' },
-    take: 200,
+    skip: (currentPage - 1) * PAGE_SIZE,
+    take: PAGE_SIZE,
   })
 
-  const displayList = mediaList.map((item) => ({
+  const totalCount = await prisma.media.count({ where })
+  const totalPages = Math.max(1, Math.ceil(totalCount / PAGE_SIZE))
+  const safePage = Math.min(currentPage, totalPages)
+
+  const pagedMediaList =
+    safePage === currentPage
+      ? mediaList
+      : await prisma.media.findMany({
+          where,
+          orderBy: { createdAt: 'desc' },
+          skip: (safePage - 1) * PAGE_SIZE,
+          take: PAGE_SIZE,
+        })
+
+  const displayList = pagedMediaList.map((item) => ({
     ...item,
     accessUrl: getSignedCosUrl(item.publicId, item.url),
     tags: parseTags(item.tags),
   }))
 
-  const filteredByTag =
-    selectedTags.length === 0
-      ? displayList
-      : displayList.filter((item) =>
-          item.tags.some((tag) => selectedTags.includes(tag)),
-        )
-
-  const grouped = filteredByTag.reduce(
+  const grouped = displayList.reduce(
     (acc, item) => {
       const key = toMonthKey(item.createdAt)
       if (!acc[key]) {
@@ -134,6 +189,8 @@ export default async function TimelinePage({
   )
 
   const monthKeys = Object.keys(grouped).sort((a, b) => (a > b ? -1 : 1))
+  const prevPageHref = buildTimelinePageHref(query, safePage - 1)
+  const nextPageHref = buildTimelinePageHref(query, safePage + 1)
 
   return (
     <main className="mx-auto w-full max-w-6xl px-4 py-8 sm:px-6 lg:px-8">
@@ -164,71 +221,100 @@ export default async function TimelinePage({
         />
       </section>
 
-      {filteredByTag.length === 0 ? (
+      {displayList.length === 0 ? (
         <section className="glass-panel mt-6 rounded-3xl p-8 text-center text-sm text-[#4d7078]">
           没有符合该时间条件的内容。
         </section>
       ) : (
-        <section className="mt-6 space-y-8">
-          {monthKeys.map((monthKey) => (
-            <div key={monthKey} className="glass-panel rounded-3xl p-5 sm:p-6">
-              <h2 className="text-xl font-semibold text-[#1d3a43]">
-                {toMonthLabel(monthKey)}
-              </h2>
-              <div className="mt-4 columns-1 gap-5 sm:columns-2 lg:columns-3">
-                {grouped[monthKey].map((item) => (
-                  <Link
-                    key={item.id}
-                    href={`/media/${item.id}`}
-                    className="group mb-5 block break-inside-avoid"
-                  >
-                    <article className="glass-panel overflow-hidden rounded-2xl transition-transform duration-300 ease-out group-hover:scale-[1.02]">
-                      {item.type === 'IMAGE' ? (
-                        <div className="relative h-56 w-full">
-                          <Image
-                            src={item.accessUrl}
-                            alt={item.title}
-                            fill
-                            unoptimized
-                            sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 33vw"
-                            className="object-cover"
-                          />
-                        </div>
-                      ) : (
-                        <video
-                          className="h-56 w-full object-cover"
-                          preload="metadata"
-                          src={`${item.accessUrl}#t=0.001`}
-                        />
-                      )}
-
-                      <div className="p-4">
-                        <h3 className="line-clamp-2-custom text-lg font-semibold text-[#1d3a43]">
-                          {item.title}
-                        </h3>
-                        <p className="mt-2 text-xs text-[#5f7f86]">
-                          {new Date(item.createdAt).toLocaleDateString('zh-CN')}
-                        </p>
-                        {item.tags.length > 0 ? (
-                          <div className="mt-2 flex flex-wrap gap-1.5">
-                            {item.tags.map((tag) => (
-                              <span
-                                key={`${item.id}-${tag}`}
-                                className="rounded-full border border-[#b6d9d4] bg-white/80 px-2 py-0.5 text-[11px] text-[#355861]"
-                              >
-                                #{tag}
-                              </span>
-                            ))}
+        <>
+          <section className="mt-6 space-y-8">
+            {monthKeys.map((monthKey) => (
+              <div
+                key={monthKey}
+                className="glass-panel rounded-3xl p-5 sm:p-6"
+              >
+                <h2 className="text-xl font-semibold text-[#1d3a43]">
+                  {toMonthLabel(monthKey)}
+                </h2>
+                <div className="mt-4 columns-1 gap-5 sm:columns-2 lg:columns-3">
+                  {grouped[monthKey].map((item) => (
+                    <Link
+                      key={item.id}
+                      href={`/media/${item.id}`}
+                      className="group mb-5 block break-inside-avoid"
+                    >
+                      <article className="glass-panel overflow-hidden rounded-2xl transition-transform duration-300 ease-out group-hover:scale-[1.02]">
+                        {item.type === 'IMAGE' ? (
+                          <div className="relative h-56 w-full">
+                            <Image
+                              src={item.accessUrl}
+                              alt={item.title}
+                              fill
+                              unoptimized
+                              sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 33vw"
+                              className="object-cover"
+                            />
                           </div>
-                        ) : null}
-                      </div>
-                    </article>
-                  </Link>
-                ))}
+                        ) : (
+                          <video
+                            className="h-56 w-full object-cover"
+                            preload="metadata"
+                            src={`${item.accessUrl}#t=0.001`}
+                          />
+                        )}
+
+                        <div className="p-4">
+                          <h3 className="line-clamp-2-custom text-lg font-semibold text-[#1d3a43]">
+                            {item.title}
+                          </h3>
+                          <p className="mt-2 text-xs text-[#5f7f86]">
+                            {new Date(item.createdAt).toLocaleDateString(
+                              'zh-CN',
+                            )}
+                          </p>
+                          {item.tags.length > 0 ? (
+                            <div className="mt-2 flex flex-wrap gap-1.5">
+                              {item.tags.map((tag) => (
+                                <span
+                                  key={`${item.id}-${tag}`}
+                                  className="rounded-full border border-[#b6d9d4] bg-white/80 px-2 py-0.5 text-[11px] text-[#355861]"
+                                >
+                                  #{tag}
+                                </span>
+                              ))}
+                            </div>
+                          ) : null}
+                        </div>
+                      </article>
+                    </Link>
+                  ))}
+                </div>
               </div>
-            </div>
-          ))}
-        </section>
+            ))}
+          </section>
+
+          {totalPages > 1 ? (
+            <nav className="mt-6 flex items-center justify-center gap-3 text-sm">
+              <Link
+                href={prevPageHref}
+                aria-disabled={safePage <= 1}
+                className="rounded-full border border-[#2b8f83] px-4 py-2 font-semibold text-[#2b8f83] transition hover:bg-[#2b8f83] hover:text-white aria-disabled:pointer-events-none aria-disabled:opacity-45"
+              >
+                上一页
+              </Link>
+              <span className="text-[#4d7078]">
+                第 {safePage} / {totalPages} 页
+              </span>
+              <Link
+                href={nextPageHref}
+                aria-disabled={safePage >= totalPages}
+                className="rounded-full border border-[#2b8f83] px-4 py-2 font-semibold text-[#2b8f83] transition hover:bg-[#2b8f83] hover:text-white aria-disabled:pointer-events-none aria-disabled:opacity-45"
+              >
+                下一页
+              </Link>
+            </nav>
+          ) : null}
+        </>
       )}
     </main>
   )
