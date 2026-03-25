@@ -26,6 +26,7 @@ jobs:
           TENCENT_HOST: ${{ secrets.TENCENT_HOST }}
           TENCENT_USER: ${{ secrets.TENCENT_USER }}
           TENCENT_DEPLOY_PATH: ${{ secrets.TENCENT_DEPLOY_PATH }}
+          TENCENT_REPO_URL: ${{ secrets.TENCENT_REPO_URL }}
           TENCENT_SSH_KEY: ${{ secrets.TENCENT_SSH_KEY }}
           TENCENT_SSH_PASSWORD: ${{ secrets.TENCENT_SSH_PASSWORD }}
         run: |
@@ -65,11 +66,30 @@ jobs:
             set -euo pipefail
 
             DEPLOY_PATH="${{ secrets.TENCENT_DEPLOY_PATH }}"
+            REPO_URL="${{ secrets.TENCENT_REPO_URL }}"
             BRANCH="${{ github.event.inputs.branch || 'main' }}"
 
             if [[ -z "$DEPLOY_PATH" ]]; then
               echo "TENCENT_DEPLOY_PATH is empty"
               exit 1
+            fi
+
+            mkdir -p "$DEPLOY_PATH"
+
+            if [[ ! -d "$DEPLOY_PATH/.git" ]]; then
+              if [[ -z "$REPO_URL" ]]; then
+                echo "Path is not a git repository and TENCENT_REPO_URL is empty"
+                exit 1
+              fi
+
+              if [[ -n "$(ls -A "$DEPLOY_PATH" 2>/dev/null)" ]]; then
+                echo "Path exists but is not a git repository: $DEPLOY_PATH"
+                echo "Please clean the directory or set TENCENT_DEPLOY_PATH to an empty path"
+                exit 1
+              fi
+
+              echo "== Bootstrap repository =="
+              git clone --branch "$BRANCH" "$REPO_URL" "$DEPLOY_PATH"
             fi
 
             cd "$DEPLOY_PATH"

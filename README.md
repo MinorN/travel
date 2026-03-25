@@ -115,6 +115,7 @@
 4. TENCENT_SSH_PASSWORD：SSH 登录密码（如果不用私钥就填这个）。
 5. TENCENT_PORT：SSH 端口（默认 22，可留空）。
 6. TENCENT_DEPLOY_PATH：服务器上的项目路径（例如 /home/ubuntu/travel）。
+7. TENCENT_REPO_URL：首次部署时用于自动克隆仓库（例如 git@github.com:org/repo.git 或 https://github.com/org/repo.git）。
 
 认证方式说明：
 
@@ -134,3 +135,8 @@
 1. git pull --ff-only 同步目标分支代码。
 2. bash docker/deploy.sh 构建并重启容器、执行 Prisma migrate deploy。
 3. bash docker/check.sh 输出健康状态。
+
+说明：
+
+1. 如果 TENCENT_DEPLOY_PATH 不是 Git 仓库，工作流会尝试用 TENCENT_REPO_URL 自动克隆。
+2. 如果路径非空且不是 Git 仓库，会直接失败并提示你更换空目录或清理目录。
