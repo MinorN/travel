@@ -21,12 +21,43 @@ jobs:
     env:
       DEPLOY_BRANCH: ${{ github.event.inputs.branch || 'main' }}
     steps:
+      - name: Validate required secrets
+        env:
+          TENCENT_HOST: ${{ secrets.TENCENT_HOST }}
+          TENCENT_USER: ${{ secrets.TENCENT_USER }}
+          TENCENT_DEPLOY_PATH: ${{ secrets.TENCENT_DEPLOY_PATH }}
+          TENCENT_SSH_KEY: ${{ secrets.TENCENT_SSH_KEY }}
+          TENCENT_SSH_PASSWORD: ${{ secrets.TENCENT_SSH_PASSWORD }}
+        run: |
+          set -euo pipefail
+
+          if [[ -z "${TENCENT_HOST}" ]]; then
+            echo "Missing secret: TENCENT_HOST"
+            exit 1
+          fi
+
+          if [[ -z "${TENCENT_USER}" ]]; then
+            echo "Missing secret: TENCENT_USER"
+            exit 1
+          fi
+
+          if [[ -z "${TENCENT_DEPLOY_PATH}" ]]; then
+            echo "Missing secret: TENCENT_DEPLOY_PATH"
+            exit 1
+          fi
+
+          if [[ -z "${TENCENT_SSH_KEY}" && -z "${TENCENT_SSH_PASSWORD}" ]]; then
+            echo "Missing authentication secret: set TENCENT_SSH_KEY or TENCENT_SSH_PASSWORD"
+            exit 1
+          fi
+
       - name: Deploy via SSH
         uses: appleboy/ssh-action@v1.2.0
         with:
           host: ${{ secrets.TENCENT_HOST }}
           username: ${{ secrets.TENCENT_USER }}
           key: ${{ secrets.TENCENT_SSH_KEY }}
+          password: ${{ secrets.TENCENT_SSH_PASSWORD }}
           port: ${{ secrets.TENCENT_PORT || '22' }}
           script_stop: true
           command_timeout: 30m
